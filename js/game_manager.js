@@ -10,6 +10,13 @@ function GameManager(size, InputManager, Actuator, StorageManager) {
   this.inputManager.on("restart", this.restart.bind(this));
   this.inputManager.on("keepPlaying", this.keepPlaying.bind(this));
 
+  this.solving = false;
+  this.timer = null;
+  this.inputManager.on("solve",this.solve.bind(this));
+
+
+  this.inputManager.on("hint",this.hint.bind(this));
+
   this.setup();
 }
 
@@ -18,6 +25,52 @@ GameManager.prototype.restart = function () {
   this.storageManager.clearGameState();
   this.actuator.continueGame(); // Clear the game won/lost message
   this.setup();
+};
+GameManager.prototype.solve = function () {
+  this.solving = !this.solving;
+
+  var self = this;
+  if (this.solving) {
+    document.getElementById("solving").innerHTML = "Stop!";
+    this.timer = setInterval(function(){self.hint();},400);
+  }
+  else {
+    document.getElementById("solving").innerHTML = "Solve it!";
+    this.timer = clearInterval(this.timer);
+  }
+}
+GameManager.prototype.hint = function () {
+
+  simulationsTotal = 100;
+  this.setup();
+  valores = [0,0,0,0];
+  for(i = 0; i < 4*simulationsTotal; i++) {
+    started = Math.floor(i/simulationsTotal);
+    if (this.move2(started)) {
+      while (!this.over) {
+        randmove = Math.floor(Math.random() * 4.);
+        this.move2(randmove);
+        valores[started]++;
+        if (this.won) { valores[started] += 500; break; }
+      }
+    }
+    else started += simulationsTotal;
+
+    this.setup();
+  }
+  resultado = 0;
+  for(i = 1; i < 4; i++) {
+    if (valores[i] >= valores[resultado]) resultado = i;
+  }
+  this.setup();
+  this.actuator.continueGame();
+
+  this.move(resultado);
+
+  if (this.won) {
+    document.getElementById("solving").innerHTML = "Solve it!";
+    this.timer = clearInterval(this.timer);
+  }
 };
 
 // Keep playing after winning (allows going over 2048)
@@ -188,6 +241,70 @@ GameManager.prototype.move = function (direction) {
 
     this.actuate();
   }
+};
+
+GameManager.prototype.move2 = function (direction) {
+  // 0: up, 1: right, 2: down, 3: left
+  var self = this;
+
+  if (this.isGameTerminated()) return; // Don't do anything if the game's over
+
+  var cell, tile;
+
+  var vector     = this.getVector(direction);
+  var traversals = this.buildTraversals(vector);
+  var moved      = false;
+
+  // Save the current tile positions and remove merger information
+  this.prepareTiles();
+
+  // Traverse the grid in the right direction and move tiles
+  traversals.x.forEach(function (x) {
+    traversals.y.forEach(function (y) {
+      cell = { x: x, y: y };
+      tile = self.grid.cellContent(cell);
+
+      if (tile) {
+        var positions = self.findFarthestPosition(cell, vector);
+        var next      = self.grid.cellContent(positions.next);
+
+        // Only one merger per row traversal?
+        if (next && next.value === tile.value && !next.mergedFrom) {
+          var merged = new Tile(positions.next, tile.value * 2);
+          merged.mergedFrom = [tile, next];
+
+          self.grid.insertTile(merged);
+          self.grid.removeTile(tile);
+
+          // Converge the two tiles' positions
+          tile.updatePosition(positions.next);
+
+          // Update the score
+          self.score += merged.value;
+
+          // The mighty 2048 tile
+          if (merged.value === 2048) self.won = true;
+        } else {
+          self.moveTile(tile, positions.farthest);
+        }
+
+        if (!self.positionsEqual(cell, tile)) {
+          moved = true; // The tile moved from its original cell!
+        }
+      }
+    });
+  });
+
+  if (moved) {
+    this.addRandomTile();
+
+    if (!this.movesAvailable()) {
+      this.over = true; // Game over!
+    }
+
+    return true;
+  }
+  return false;
 };
 
 // Get the vector representing the chosen direction

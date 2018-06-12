@@ -1,6 +1,9 @@
 function KeyboardInputManager() {
   this.events = {};
 
+  this.solving = false;
+  this.timer = null;
+
   if (window.navigator.msPointerEnabled) {
     //Internet Explorer 10 style
     this.eventTouchstart    = "MSPointerDown";
@@ -72,6 +75,13 @@ KeyboardInputManager.prototype.listen = function () {
   this.bindButtonPress(".retry-button", this.restart);
   this.bindButtonPress(".restart-button", this.restart);
   this.bindButtonPress(".keep-playing-button", this.keepPlaying);
+  
+  //to HINT button
+  this.bindButtonPress(".hint-button", this.hint);
+
+
+  //to SOLVE button
+  this.bindButtonPress(".solve-button", this.solve);
 
   // Respond to swipe events
   var touchStartClientX, touchStartClientY;
@@ -141,4 +151,14 @@ KeyboardInputManager.prototype.bindButtonPress = function (selector, fn) {
   var button = document.querySelector(selector);
   button.addEventListener("click", fn.bind(this));
   button.addEventListener(this.eventTouchend, fn.bind(this));
+};
+
+KeyboardInputManager.prototype.hint = function (event) {
+  event.preventDefault();
+  this.emit("hint");
+};
+
+KeyboardInputManager.prototype.solve = function (event) {
+  event.preventDefault();
+  this.emit("solve");
 };
