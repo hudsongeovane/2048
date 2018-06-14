@@ -1,6 +1,6 @@
-# 2048 IA
+# 2048 AI
 
-This repository implements a IA for the game 2048.
+This repository implements a AI for the game 2048.
 
 ### Official APP
 
