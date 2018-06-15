@@ -32,7 +32,7 @@ GameManager.prototype.solve = function () {
   var self = this;
   if (this.solving) {
     document.getElementById("solving").innerHTML = "Stop!";
-    this.timer = setInterval(function(){self.hint();},400);
+    this.timer = setInterval(function(){self.hint();},300);
   }
   else {
     document.getElementById("solving").innerHTML = "Solve it!";
@@ -40,37 +40,39 @@ GameManager.prototype.solve = function () {
   }
 }
 GameManager.prototype.hint = function () {
-
-  simulationsTotal = 100;
-  this.setup();
+  // 0: up, 1: right, 2: down, 3: left
+  simulationsTotal = 25;
   valores = [0,0,0,0];
   for(i = 0; i < 4*simulationsTotal; i++) {
     started = Math.floor(i/simulationsTotal);
     if (this.move2(started)) {
       while (!this.over) {
         randmove = Math.floor(Math.random() * 4.);
-        this.move2(randmove);
-        valores[started]++;
+        if (this.move2(randmove)) valores[started]++;
+        
         if (this.won) { valores[started] += 500; break; }
       }
     }
-    else started += simulationsTotal;
-
+    else {
+      i += simulationsTotal;
+    }
     this.setup();
   }
   resultado = 0;
   for(i = 1; i < 4; i++) {
     if (valores[i] >= valores[resultado]) resultado = i;
   }
-  this.setup();
-  this.actuator.continueGame();
-
+  
   this.move(resultado);
 
   if (this.won) {
-    document.getElementById("solving").innerHTML = "Solve it!";
-    this.timer = clearInterval(this.timer);
+    this.keepPlaying();
   }
+
+  // if (this.won) {
+  //   document.getElementById("solving").innerHTML = "Solve it!";
+  //   this.timer = clearInterval(this.timer);
+  // }
 };
 
 // Keep playing after winning (allows going over 2048)
@@ -251,6 +253,8 @@ GameManager.prototype.move2 = function (direction) {
 
   var cell, tile;
 
+  mergedv = 0;
+
   var vector     = this.getVector(direction);
   var traversals = this.buildTraversals(vector);
   var moved      = false;
@@ -284,6 +288,7 @@ GameManager.prototype.move2 = function (direction) {
 
           // The mighty 2048 tile
           if (merged.value === 2048) self.won = true;
+          mergedv = merged.value;
         } else {
           self.moveTile(tile, positions.farthest);
         }
@@ -302,9 +307,9 @@ GameManager.prototype.move2 = function (direction) {
       this.over = true; // Game over!
     }
 
-    return true;
+    return 1+mergedv;
   }
-  return false;
+  return 0;
 };
 
 // Get the vector representing the chosen direction
