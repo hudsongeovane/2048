@@ -1,6 +1,8 @@
 # 2048 AI
 
-This repository implements a AI for the game 2048.
+This repository implements a AI for the game 2048. It was developed by @hudsongeovane.
+
+The algorithm idea is based on monte carlo simulations. Movements are played randomly several times and the one with higher probability of "not losing" is chosen. This strategy leads to win often.
 
 ### Official APP
 
